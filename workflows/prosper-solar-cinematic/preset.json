@@ -1,0 +1,21 @@
+{
+  "name": "Prosper solar and battery cinematic",
+  "version": 1,
+  "backend": "Seedance 2.5 First & Last Frame",
+  "aspectRatio": "9:16",
+  "keyframes": [
+    { "file": "01-battery-solar-hero.png", "purpose": "real-house battery and black solar hero" },
+    { "file": "02-aerial-house.png", "purpose": "aerial house and neighborhood continuity frame" },
+    { "file": "03-neighborhood.png", "purpose": "neighborhood ascent review frame" },
+    { "file": "04-virginia-city.png", "purpose": "Virginia city review frame" },
+    { "file": "05-earth-limb.png", "purpose": "atmosphere and Earth-limb review frame" },
+    { "file": "06-earth-moon.png", "purpose": "Earth and Moon continuity frame" },
+    { "file": "07-sun-approach.png", "purpose": "Sun-approach review frame" },
+    { "file": "08-solar-flare.png", "purpose": "solar-flare final frame" }
+  ],
+  "clips": [
+    { "id": "clip-a-house", "firstFrame": "source", "lastFrame": "02-aerial-house.png" },
+    { "id": "clip-b-earth", "firstFrame": "02-aerial-house.png", "lastFrame": "06-earth-moon.png" },
+    { "id": "clip-c-sun", "firstFrame": "06-earth-moon.png", "lastFrame": "08-solar-flare.png" }
+  ]
+}
