@@ -6,6 +6,8 @@ This is a repeatable three-clip image-to-video workflow for the real Prosper hou
 
 Place Craig-approved, standalone images in `keyframes/` using every filename in `preset.json`. The source house image is supplied separately with `--source`. Do not replace a missing source image with a generated house.
 
+Use [the individual keyframe brief](KEYFRAMES.md) to create and review the eight separate stills before a paid video run.
+
 The runner uses these continuity boundaries:
 
 | Clip | First frame | Last frame |
