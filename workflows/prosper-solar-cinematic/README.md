@@ -27,13 +27,18 @@ node scripts/prosper-solar-cinematic.mjs \
   --quality preview
 ```
 
-Render a low-resolution proof after setting `MUAPI_API_KEY` in the shell (never commit it):
+Render a low-resolution proof after setting `MUAPI_API_KEY` in the shell (never commit it). The first command only uploads the approved assets and records a fresh dynamic cost estimate; it cannot submit a generation. Review the total, then explicitly approve it in the second command:
 
 ```bash
 MUAPI_API_KEY='...' node scripts/prosper-solar-cinematic.mjs \
   --execute --quality preview \
   --source /absolute/path/IMG_4670.jpeg \
   --keyframes-dir workflows/prosper-solar-cinematic/keyframes
+```
+
+```bash
+MUAPI_API_KEY='...' node scripts/prosper-solar-cinematic.mjs \
+  --execute --approve-cost --resume /absolute/path/to/run
 ```
 
 For an approved 1080p render, change `--quality` to `final`. The runner records uploads, request IDs, polling results, downloaded clips, and the assembled MP4 under `.prosper-video-runs/`. Resume an interrupted run without paying for completed clips:
@@ -46,6 +51,6 @@ The generated final is `outputs/prosper-solar-cinematic-9x16.mp4` in that run di
 
 ## Backend and safety
 
-Preview uses `seedance-2.5-first-last-frame-480p`; final uses `seedance-2.5-first-last-frame-1080p`. Both are currently wired in the Studio catalog and accept exactly two `images_list` inputs. The runner does not create paid jobs unless `--execute` is supplied, and it never writes the API key into state or logs.
+Preview uses `seedance-2.5-first-last-frame-480p`; final uses `seedance-2.5-first-last-frame-1080p`. Both are currently wired in the Studio catalog and accept exactly two `images_list` inputs. The runner records a fresh cost estimate and does not create paid jobs unless both `--execute` and `--approve-cost` are supplied. It never writes the API key into state or logs.
 
 The local Wan2GP route belongs to the Electron desktop client, not the deployed web app. It remains a separate GPU-server fallback; see the repository's Local Models settings after the cloud proof is complete.

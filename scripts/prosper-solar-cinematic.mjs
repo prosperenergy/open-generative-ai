@@ -33,7 +33,7 @@ function fail(message) {
 }
 
 function usage() {
-  return `Usage: node scripts/prosper-solar-cinematic.mjs --source <IMG_4670.jpeg> --keyframes-dir <dir> [--quality preview|final] [--execute] [--run-dir <dir>] [--resume <run-dir>] [--assemble <run-dir>]\n`;
+  return `Usage: node scripts/prosper-solar-cinematic.mjs --source <IMG_4670.jpeg> --keyframes-dir <dir> [--quality preview|final] [--execute --approve-cost] [--run-dir <dir>] [--resume <run-dir>] [--assemble <run-dir>]\n`;
 }
 
 function parseArgs(argv) {
@@ -41,6 +41,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--execute') options.execute = true;
+    else if (arg === '--approve-cost') options.approveCost = true;
     else if (arg === '--source' || arg === '--keyframes-dir' || arg === '--quality' || arg === '--run-dir' || arg === '--resume' || arg === '--assemble') {
       options[arg.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = argv[++index];
     } else if (arg === '--help' || arg === '-h') options.help = true;
@@ -128,6 +129,17 @@ async function submitClip(apiKey, endpoint, payload) {
   const requestId = result.request_id || result.id;
   if (!requestId) throw new Error(`Submission returned no request ID: ${JSON.stringify(result).slice(0, 500)}`);
   return { requestId, submitted: result };
+}
+
+async function estimateClipCost(endpoint, payload) {
+  const response = await checkedFetch(`${API_BASE}/api/v1/models/${endpoint}/estimate-cost`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
+  }, '');
+  const estimate = await response.json();
+  if (!Number.isFinite(estimate?.cost) || estimate.cost < 0 || typeof estimate?.currency !== 'string') {
+    throw new Error(`Cost estimate returned an invalid response: ${JSON.stringify(estimate).slice(0, 500)}`);
+  }
+  return { cost: estimate.cost, currency: estimate.currency, dynamicPricing: Boolean(estimate.dynamic_pricing), estimatedAt: new Date().toISOString() };
 }
 
 async function pollClip(apiKey, requestId) {
@@ -229,12 +241,33 @@ async function main() {
     }
   }
 
-  for (const clip of preset.clips) {
-    const clipState = state.clips[clip.id] ||= { status: 'prepared' };
-    if (clipState.status === 'completed' && clipState.file && existsSync(clipState.file)) continue;
+  const plans = preset.clips.map((clip) => {
     const firstUrl = state.uploads[clip.firstFrame];
     const lastUrl = state.uploads[clip.lastFrame];
-    const payload = { prompt: PROMPTS[clip.id], images_list: [firstUrl, lastUrl], aspect_ratio: '9:16', duration: state.quality === 'final' ? 12 : 5, high_bitrate: state.quality === 'final' };
+    return {
+      clip,
+      payload: { prompt: PROMPTS[clip.id], images_list: [firstUrl, lastUrl], aspect_ratio: '9:16', duration: state.quality === 'final' ? 12 : 5, high_bitrate: state.quality === 'final' }
+    };
+  });
+  state.costEstimates ||= {};
+  for (const { clip, payload } of plans) {
+    if (!state.costEstimates[clip.id]) state.costEstimates[clip.id] = await estimateClipCost(endpoint, payload);
+  }
+  const estimates = Object.values(state.costEstimates);
+  const currencies = new Set(estimates.map(({ currency }) => currency));
+  state.estimatedTotal = currencies.size === 1
+    ? { cost: estimates.reduce((total, { cost }) => total + cost, 0), currency: estimates[0]?.currency, dynamicPricing: estimates.some(({ dynamicPricing }) => dynamicPricing) }
+    : null;
+  writeJson(statePath, state);
+  if (!options.approveCost) {
+    const total = state.estimatedTotal ? `${state.estimatedTotal.cost.toFixed(2)} ${state.estimatedTotal.currency}` : 'multiple currencies';
+    process.stdout.write(`Estimated provider total: ${total}. No generation was submitted. Re-run with --execute --approve-cost only after approving this dynamic estimate.\n`);
+    return;
+  }
+
+  for (const { clip, payload } of plans) {
+    const clipState = state.clips[clip.id] ||= { status: 'prepared' };
+    if (clipState.status === 'completed' && clipState.file && existsSync(clipState.file)) continue;
     if (!clipState.requestId) {
       const submitted = await submitClip(apiKey, endpoint, payload);
       Object.assign(clipState, submitted, { status: 'submitted', payload });

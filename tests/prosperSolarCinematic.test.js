@@ -25,6 +25,7 @@ test('Prosper cinematic runner validates assets and creates a no-cost resumable 
   assert.equal(state.backend, 'seedance-2.5-first-last-frame-480p');
   assert.deepEqual(Object.keys(state.clips), ['clip-a-house', 'clip-b-earth', 'clip-c-sun']);
   assert.equal(state.clips['clip-a-house'].status, 'prepared');
+  assert.equal(state.costEstimates, undefined);
   const resumed = spawnSync(process.execPath, ['scripts/prosper-solar-cinematic.mjs', '--resume', runDir], {
     cwd: join(__dirname, '..'), encoding: 'utf8'
   });
