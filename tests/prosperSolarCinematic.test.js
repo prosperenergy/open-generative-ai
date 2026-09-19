@@ -25,6 +25,11 @@ test('Prosper cinematic runner validates assets and creates a no-cost resumable 
   assert.equal(state.backend, 'seedance-2.5-first-last-frame-480p');
   assert.deepEqual(Object.keys(state.clips), ['clip-a-house', 'clip-b-earth', 'clip-c-sun']);
   assert.equal(state.clips['clip-a-house'].status, 'prepared');
+  const resumed = spawnSync(process.execPath, ['scripts/prosper-solar-cinematic.mjs', '--resume', runDir], {
+    cwd: join(__dirname, '..'), encoding: 'utf8'
+  });
+  assert.equal(resumed.status, 0, resumed.stderr);
+  assert.match(resumed.stdout, /No provider request was sent/);
   rmSync(fixture, { recursive: true, force: true });
 });
 
